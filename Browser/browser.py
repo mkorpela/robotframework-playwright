@@ -23,6 +23,8 @@ from typing import Dict, List, Optional, Set, Union
 
 from robot.libraries.BuiltIn import EXECUTION_CONTEXTS, BuiltIn  # type: ignore
 from robot.utils import secs_to_timestr, timestr_to_secs  # type: ignore
+from robot.result.model import TestCase as TestCaseResult  # type: ignore
+from robot.running.model import TestCase as TestCaseRunning  # type: ignore
 from robotlibcore import DynamicCore  # type: ignore
 
 from .base import ContextCache, LibraryComponent
@@ -722,7 +724,7 @@ class Browser(DynamicCore):
             except ConnectionError as e:
                 logger.debug(f"Browser._start_test connection problem: {e}")
 
-    def _end_test(self, test, result):
+    def _end_test(self, test: TestCaseRunning, result: TestCaseResult):
         if len(self._unresolved_promises) > 0:
             logger.warn(f"Waiting unresolved promises at the end of test '{test.name}'")
             self.wait_for_all_promises()
@@ -741,6 +743,7 @@ class Browser(DynamicCore):
             except ConnectionError as e:
                 logger.debug(f"Browser._end_test connection problem: {e}")
 
+
     def _end_suite(self, suite, result):
         if self._auto_closing_level != AutoClosingLevel.MANUAL:
             if len(self._execution_stack) == 0:
@@ -755,7 +758,6 @@ class Browser(DynamicCore):
                 logger.debug(f"Browser._end_suite connection problem: {e}")
 
     def _prune_execution_stack(self, catalog_before: dict) -> None:
-        # WIP CODE BEGINS
         catalog_after = self.get_browser_catalog()
         ctx_before_ids = [c["id"] for b in catalog_before for c in b["contexts"]]
         ctx_after_ids = [c["id"] for b in catalog_after for c in b["contexts"]]
@@ -779,17 +781,6 @@ class Browser(DynamicCore):
         new_page_ids = [p for p in pages_after if p not in pages_before]
         for page_id, ctx_id in new_page_ids:
             self._playwright_state.close_page(page_id, ctx_id)
-        # try to set active page and context back to right place.
-        # Not needed now that active page and context are just stack heads
-        """ for browser in catalog_after:
-            if browser["activeBrowser"]:
-                activeContext = browser.get("activeContext", None)
-                activePage = browser.get("activePage", None)
-                if not new_ctx_ids and activeContext is not None:
-                    self._playwright_state.switch_context(activeContext)
-                    if not (activePage, activeContext) in new_page_ids:
-                        self._playwright_state.switch_page(activePage)
-        """
 
     def run_keyword(self, name, args, kwargs=None):
         try:
